@@ -43,8 +43,7 @@ def process_news_source(news_source) -> Optional[NewsSource]:
 
 
 def main() -> None:
-    # Load cached copy of HTML table from AllSides Media Bias Ratings:
-    # https://www.allsides.com/media-bias/media-bias-ratings?field_featured_bias_rating_value=All&field_news_source_type_tid%5B2%5D=2&field_news_bias_nid_1%5B1%5D=1&field_news_bias_nid_1%5B2%5D=2&field_news_bias_nid_1%5B3%5D=3&title=
+    # Load cached copy of HTML table from AllSides Media Bias Ratings
     with open('media_bias_table.html') as html:
         bs = BeautifulSoup(html, 'html.parser')
     # Split table by rows without first result (table header)
