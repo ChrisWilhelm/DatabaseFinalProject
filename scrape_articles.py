@@ -37,7 +37,7 @@ def process_articles_helper(articles: list[Article], news_source: NewsSource) ->
 def main() -> None:
     # Load in parsed news sources
     with open('news_sources.pickle', 'rb') as infile:
-        news_sources: list[NewsSource] = load(infile)[:2]
+        news_sources: list[NewsSource] = load(infile)
     # Build each paper object in parallel: use thread-based parallelism because IO-bound
     papers = []
     with ThreadPoolExecutor() as executor:
