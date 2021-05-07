@@ -1,3 +1,4 @@
+from concurrent.futures import as_completed, ThreadPoolExecutor
 from bs4 import BeautifulSoup, SoupStrainer
 from custom_types import NewsSource, Rating
 from pickle import dump, HIGHEST_PROTOCOL
@@ -37,7 +38,11 @@ def process_news_source(news_source) -> Optional[NewsSource]:
     proxy_bs = BeautifulSoup(proxy_html, 'html.parser', parse_only=SoupStrainer(class_='dynamic-grid'))
     link = proxy_bs.find('a')
     if link is not None:
-        return NewsSource(name, rating, link['href'])
+        url = link['href']
+        if url:
+            return NewsSource(name, rating, url)
+        else:
+            return None
     else:
         return None
 
@@ -49,12 +54,14 @@ def main() -> None:
     # Split table by rows without first result (table header)
     news_sources = bs('tr')[1:]
     print(f'Found {len(news_sources)} news source candidates')
-    # Process each news source and save results
+    # Process each news source in parallel: use thread-based parallelism because IO-bound
     results = []
-    for news_source in tqdm(news_sources, total=len(news_sources)):
-        result = process_news_source(news_source)
-        if result is not None:
-            results.append(result)
+    with ThreadPoolExecutor() as executor:
+        futures = [executor.submit(process_news_source, news_source) for news_source in news_sources]
+        for future in tqdm(as_completed(futures), total=len(futures), desc='Processing Step'):
+            result = future.result()
+            if result is not None:
+                results.append(result)
     print(f'Only {len(results)} news sources were actually valid')
     # Save results using pickle
     with open('news_sources.pickle', 'wb') as outfile:
