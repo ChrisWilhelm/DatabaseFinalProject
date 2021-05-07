@@ -16,3 +16,12 @@ class NewsSource(NamedTuple):
     name: str
     rating: Rating
     url: str
+
+
+class Story(NamedTuple):
+    news_source: NewsSource
+    title: str
+    authors: frozenset[str]
+    text: str
+    summary: str
+    keywords: frozenset[str]
