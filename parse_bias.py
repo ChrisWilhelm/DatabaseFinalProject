@@ -56,6 +56,7 @@ def main() -> None:
         if result is not None:
             results.append(result)
     print(f'Only {len(results)} news sources were actually valid')
+    # Save results using pickle
     with open('news_sources.pickle', 'wb') as outfile:
         dump(results, outfile, protocol=HIGHEST_PROTOCOL)
 
