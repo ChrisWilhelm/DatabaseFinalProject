@@ -1,8 +1,10 @@
 from concurrent.futures import as_completed, ThreadPoolExecutor
-from custom_types import NewsSource, Story
-from newspaper import Article, build, Source
 from pickle import dump, HIGHEST_PROTOCOL, load
+
+from newspaper import Article, build, Source
 from tqdm import tqdm
+
+from custom_types import NewsSource, Story
 
 CHUNKSIZE = 10
 
@@ -26,6 +28,7 @@ def process_articles_helper(articles: list[Article], news_source: NewsSource) ->
     for article in articles:
         article.nlp()
         stories.append(Story(news_source,
+                             article.url,
                              article.title,
                              frozenset(article.authors),
                              article.text,
