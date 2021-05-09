@@ -1,5 +1,6 @@
+from datetime import datetime
 from enum import auto, Enum, unique
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 
 
 @unique
@@ -21,6 +22,7 @@ class NewsSource(NamedTuple):
 class Story(NamedTuple):
     news_source: NewsSource
     url: str
+    publish_date: Optional[datetime]
     title: str
     authors: frozenset[str]
     text: str

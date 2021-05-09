@@ -29,6 +29,7 @@ def process_articles_helper(articles: list[Article], news_source: NewsSource) ->
         article.nlp()
         stories.append(Story(news_source,
                              article.url,
+                             article.publish_date,
                              article.title,
                              frozenset(article.authors),
                              article.text,
