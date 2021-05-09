@@ -1,11 +1,10 @@
 from concurrent.futures import as_completed, ThreadPoolExecutor
+from pickle import dump, HIGHEST_PROTOCOL, load
 
-from typing import List
+from newspaper import Article, build, Source
+from tqdm import tqdm
 
 from custom_types import NewsSource, Story
-from newspaper import Article, build, Source
-from pickle import dump, HIGHEST_PROTOCOL, load
-from tqdm import tqdm
 
 CHUNKSIZE = 10
 
@@ -24,11 +23,12 @@ def build_paper_helper(url: str) -> Source:
     return paper
 
 
-def process_articles_helper(articles: List[Article], news_source: NewsSource) -> List[Story]:
+def process_articles_helper(articles: list[Article], news_source: NewsSource) -> list[Story]:
     stories = []
     for article in articles:
         article.nlp()
         stories.append(Story(news_source,
+                             article.url,
                              article.title,
                              frozenset(article.authors),
                              article.text,
@@ -40,7 +40,7 @@ def process_articles_helper(articles: List[Article], news_source: NewsSource) ->
 def main() -> None:
     # Load in parsed news sources
     with open('news_sources.pickle', 'rb') as infile:
-        news_sources: List[NewsSource] = load(infile)
+        news_sources: list[NewsSource] = load(infile)
     # Build each paper object in parallel: use thread-based parallelism because IO-bound
     papers = []
     with ThreadPoolExecutor() as executor:

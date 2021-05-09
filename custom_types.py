@@ -20,6 +20,7 @@ class NewsSource(NamedTuple):
 
 class Story(NamedTuple):
     news_source: NewsSource
+    url: str
     title: str
     authors: FrozenSet[str]
     text: str
