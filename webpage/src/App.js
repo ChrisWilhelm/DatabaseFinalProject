@@ -29,10 +29,11 @@ function App() {
             <div>
               <header className="search-results-header">
                   <SearchBar searchHook={setSearchSent} setQuery={setQuery} query={query} />
-                  {console.log(searchSent)}
               </header>
                 <VerticalTimeline >
+                    {articles.map(article => {
 
+                    })}
                 </VerticalTimeline>
             </div>
         );

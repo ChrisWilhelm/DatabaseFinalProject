@@ -2,3 +2,6 @@ bs4
 newspaper3k
 requests
 tqdm
+fastapi
+uvicorn==0.13.4
+sqlitedict

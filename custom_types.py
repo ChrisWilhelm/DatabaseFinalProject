@@ -1,5 +1,5 @@
 from enum import auto, Enum, unique
-from typing import NamedTuple
+from typing import NamedTuple, FrozenSet
 
 
 @unique
@@ -21,7 +21,7 @@ class NewsSource(NamedTuple):
 class Story(NamedTuple):
     news_source: NewsSource
     title: str
-    authors: frozenset[str]
+    authors: FrozenSet[str]
     text: str
     summary: str
-    keywords: frozenset[str]
+    keywords: FrozenSet[str]
