@@ -29,6 +29,7 @@ def process_articles_helper(articles: list[Article], news_source: NewsSource) ->
         article.nlp()
         stories.append(Story(news_source,
                              article.url,
+                             article.publish_date,
                              article.title,
                              frozenset(article.authors),
                              article.text,
@@ -54,7 +55,7 @@ def main() -> None:
         paper.parse_articles()
     # Finally, perform NLP step for each article in every paper
     stories = []
-    for i, paper in papers:
+    for i, paper in tqdm(papers, total=len(papers), desc='NLP Step'):
         stories.extend(process_articles_helper(paper.articles, news_sources[i]))
     print(f'Extracted {len(stories):,} stories total')
     # Save results using pickle
