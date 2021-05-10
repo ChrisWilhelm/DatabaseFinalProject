@@ -1,4 +1,4 @@
-from typing import NamedTuple, Union
+from typing import NamedTuple, Union, Iterable
 from numpy.linalg import norm
 from nltk import SnowballStemmer
 from nltk.corpus import stopwords
@@ -7,7 +7,9 @@ from newspaper import Article
 from collections import defaultdict
 from typing import Optional
 from datetime import datetime
-from custom_types import Rating
+from collections import Counter
+import numpy as np
+from tqdm import tqdm
 
 stop_words = set(stopwords.words('english'))
 # typedefs
@@ -104,6 +106,17 @@ def article2vec(article: Article, weights: ArticleWeights) -> BagOfWordsVector:
     return vec
 
 
+def is_useful_word(word):
+    if word.isalnum() and word not in stop_words:
+        return True
+    return False
+
+
+def tokenize_string(sentence: str) -> Iterable:
+    words = word_tokenize(sentence)
+    return map(lambda x: x.lower(), filter(is_useful_word, words))
+
+
 def string2vec(sentence: str) -> BagOfWordsVector:
     '''
     converts a query string into a sparse word vector
@@ -118,11 +131,91 @@ def string2vec(sentence: str) -> BagOfWordsVector:
 
 # run all query preprocessing from this function
 def process_query(sentence: str):
-    #TODO: nlp preprocessing steps, spellcheck
     return string2vec(sentence)
 
 
+class DocFreqs(Counter):
+    def __init__(self):
+        super(DocFreqs, self).__init__()
+        self.num_docs = 0
+
+    def set_num_docs(self, n):
+        self.num_docs = n
+
+    def get_num_docs(self):
+        return self.num_docs
 
 
+class ArticleData(NamedTuple):
+    title: Iterable[str]
+    summary: Iterable[str]
+    author: Iterable[str]
+    publisher: Iterable[str]
+    keywords: Iterable[str]
 
+    def sections(self):
+        return [self.title, self.summary, self.author, self.publisher]
+
+class ArticleDataWeights(NamedTuple):
+    title: float
+    summary: float
+    author: float
+    publisher: float
+    keywords: float
+
+
+def compute_doc_freq(documents: Iterable[ArticleData]) -> DocFreqs:
+    '''
+    Computes document frequency, i.e. how many documents contain a specific word
+    '''
+    freq = DocFreqs()
+    n = 0
+    for doc in documents:
+        n += 1
+        words = set()
+        for section in doc.sections():
+            for word in section:
+                words.add(word)
+        for word in words:
+            freq[word] += 1
+    freq.set_num_docs(n)
+    return freq
+
+
+def compute_tf(doc: ArticleData, weights: ArticleDataWeights):
+    vec = defaultdict(float)
+    for word in doc.title:
+        vec[word] += weights.title
+    for word in doc.summary:
+        vec[word] += weights.summary
+    for word in doc.author:
+        vec[word] += weights.author
+    for word in doc.publisher:
+        vec[word] += weights.publisher
+    for word in doc.keywords:
+        vec[word] += weights.keywords
+    return dict(vec)
+
+
+def compute_tfidf(doc: ArticleData, doc_freqs: DocFreqs, weights: ArticleDataWeights):
+    tf = compute_tf(doc, weights)
+    tf_idf = {}
+    N = doc_freqs.get_num_docs()
+    for word in tf.keys():
+        tf_idf[word] = tf[word] * np.log(N / (1 + doc_freqs[word]))
+    return tf_idf
+
+
+def generate_doc_tfidfs(docs: Iterable[ArticleData], weights: ArticleDataWeights, verbose=True) \
+        -> list[BagOfWordsVector]:
+    doc_freqs = compute_doc_freq(docs)
+    vectors = []
+    if verbose:
+        print("Preprocessing: generating document vectors...")
+        for doc in tqdm(docs):
+            vectors.append(compute_tfidf(doc, doc_freqs, weights))
+    else:
+        for doc in docs:
+            vectors.append(compute_tfidf(doc, doc_freqs, weights))
+    return vectors
 

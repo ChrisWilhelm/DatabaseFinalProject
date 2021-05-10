@@ -8,6 +8,7 @@ from typing import Optional, Iterable
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 import pytz
+from tqdm import tqdm
 
 app = FastAPI()
 
@@ -31,16 +32,24 @@ def setup_db():
     with open("../stories.pickle", "rb") as fp:
         articles = pickle.load(fp)
     doc_vecs_db = SqliteDict(doc_vecs_db_path)
-    article_weights = ArticleWeights(5, 1, 5)
-    for i, article in enumerate(articles):
+    article_weights = ArticleDataWeights(author=5, keywords=3, summary=1, title=4, publisher=5)
+    print("Preprocessing: tokenizing data...")
+    article_data = [ArticleData(
+        title=tokenize_string(article.title),
+        summary=tokenize_string(article.summary),
+        keywords=article.keywords,
+        author=article.authors,
+        publisher=[article.news_source.name]) for article in tqdm(articles)]
+    vectors = generate_doc_tfidfs(article_data, article_weights)
+    print("Preprocessing: Adding vectors to database...")
+    for i, article in tqdm(enumerate(articles)):
         key = i
-        vec = article2vec(article, article_weights)
         news_article = Document(
             doc_id=key,
             title=article.title,
             summary=article.summary,
             link=article.url,
-            vector=vec,
+            vector=vectors[i],
             date=article.publish_date,
             publisher=article.news_source.name,
             rating=article.news_source.rating.name,
@@ -53,7 +62,8 @@ def setup_db():
 
 def clear_db(db_path):
     doc_vecs_db = SqliteDict(db_path)
-    for key in doc_vecs_db.keys():
+    print("Clearing db {}".format(db_path))
+    for key in tqdm(doc_vecs_db.keys()):
         del doc_vecs_db[key]
     doc_vecs_db.commit()
     doc_vecs_db.close()
