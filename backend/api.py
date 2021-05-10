@@ -4,9 +4,15 @@ import pickle
 from sqlitedict import SqliteDict
 import os
 from utils import *
-import json
+from typing import Optional, Iterable
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"]
+)
 
 db_path = os.path.join(app.root_path, "db")
 if not os.path.exists(db_path):
@@ -31,7 +37,7 @@ def setup_db():
             doc_id=key,
             title=article.title,
             summary=article.summary,
-            link="https://www.google.com",
+            link=article.url,
             vector=vec
         )
         doc_vecs_db[key] = news_article
@@ -40,10 +46,80 @@ def setup_db():
 
 
 @app.get("/query")
-async def get_articles(query: str):
-    pass
+async def get_articles(q: str,
+                       n_results: Optional[int] = 20,
+                       result_range: Optional[tuple] = None):
+    # first see if we have a cached result
+    results, processed_query = check_for_cached_result(q)
+    if len(results) > 0:
+        return {"results": results}
+    else:
+        search_results = []
+        doc_ids = get_nearest(processed_query, k=n_results)
+        doc_db = SqliteDict(doc_vecs_db_path)
+        # Extract document information based on ids
+        for doc_id in doc_ids:
+            document = doc_db[doc_id]
+            doc_dict = {
+                "title": document.title,
+                "summary": document.summary,
+                "link": document.link
+            }
+            search_results.append(doc_dict)
+        doc_db.close()
+        # Add query we haven't seen to db
+        query_map_db = SqliteDict(query_map_path)
+        query_map_db[q] = processed_query
+        query_map_db.commit()
+        query_map_db.close()
+
+        query_db = SqliteDict(query_db_path)
+        query_db[q] = search_results
+        query_db.commit()
+        query_db.close()
+        return {"results": search_results}
 
 
+# Check db to see if we've precomputed a similar query already
+def check_for_cached_result(query: str, thresh: float = 0.8, sim=cosine_sim) -> tuple:
+    query_map = SqliteDict(query_map_path)
+    query_results = SqliteDict(query_db_path)
+    # see if we have computed this exact query before
+    try:
+        result = query_results[query]
+        query_vec = query_map[query]
+        query_map.close()
+        query_results.close()
+        return result, query_vec
+    except KeyError:
+        pass
+    # If not, see if any query is close enough
+    processed_query = process_query(query)
+    max_sim_query, score = get_max_sim(processed_query, query_map.items(), sim=sim)
+    if score > thresh:
+        result = query_results[max_sim_query]
+        query_map.close()
+        query_results.close()
+        return result
+    query_map.close()
+    query_results.close()
+    return [], processed_query
+
+
+def get_max_sim(q1: BagOfWordsVector,
+                queries: Iterable[tuple[str, BagOfWordsVector]],
+                sim=cosine_sim) -> tuple[str, float]:
+    max_sim_query = ""
+    max_sim_score = -1
+    for query, vector in queries:
+        sim_score = sim(q1, vector)
+        if sim_score > max_sim_score:
+            max_sim_score = sim_score
+            max_sim_query = query
+    return max_sim_query, max_sim_score
+
+
+# Returns sorted list of document ids according to some similarity metric
 def sort_by_sim(query_vec: BagOfWordsVector, doc_pairs: list, sim=cosine_sim) -> list:
     """
         Linear search through documents. doc_pairs must be a tuple list of
@@ -61,28 +137,34 @@ def threshold_filter(doc_vector, query_vector, thresh, sim):
     return sim(doc_vector, query_vector) > thresh
 
 
-def search_by_threshold(query_vec: str, doc_pairs: list, thresh: float, sim=cosine_sim) -> list:
+# Returns all documents within a specific threshold level
+def search_by_threshold(query_vec: BagOfWordsVector, doc_pairs: list, thresh: float, sim=cosine_sim) -> list:
     results = filter(lambda doc_id, doc_vec:
                      threshold_filter(doc_vec, query_vec, thresh, sim), doc_pairs)
     return [pair[0] for pair in results]
 
 
+# returns k nearest neighbor documents
 def search_by_knn(query_vec: BagOfWordsVector, doc_pairs: list, k: int, sim=cosine_sim) -> list:
     results = sort_by_sim(query_vec, doc_pairs, sim=sim)
     return results[:k]
 
 
-def get_nearest(query: str, db: SqliteDict, k=20, thresh=0, sim=cosine_sim) -> dict:
-    processed_query = string2vec(query)
+def get_nearest(query_vec: BagOfWordsVector,
+                k=20,
+                thresh=0,
+                sim=cosine_sim) -> list:
     # Generate tuple list with entries in the form of (<doc_id>, <doc_vector>)
+    db = SqliteDict(doc_vecs_db_path)
     doc_pairs = [(key, value.vector) for key, value in db.items()]
+    db.close()
     if thresh != 0:
-        results = search_by_threshold(processed_query, doc_pairs, thresh)
+        results = search_by_threshold(query_vec, doc_pairs, thresh, sim=sim)
     else:
-        results = search_by_knn(processed_query, doc_pairs, k)
-    return {}
+        results = search_by_knn(query_vec, doc_pairs, k, sim=sim)
+    return results
 
 
 if __name__ == "__main__":
-    setup_db()
+    #setup_db()
     uvicorn.run(app, host="0.0.0.0", port=8000)

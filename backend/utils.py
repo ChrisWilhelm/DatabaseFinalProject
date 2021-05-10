@@ -109,6 +109,12 @@ def string2vec(sentence: str) -> BagOfWordsVector:
     return vec
 
 
+# run all query preprocessing from this function
+def process_query(sentence: str):
+    #TODO: nlp preprocessing steps, spellcheck
+    return string2vec(sentence)
+
+
 
 
 

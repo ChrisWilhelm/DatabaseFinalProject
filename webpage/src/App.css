@@ -1,5 +1,6 @@
 :root {
   --main-color: #036;
+  --shadow-color: #262626
 }
 
 .App {
@@ -30,6 +31,10 @@
   color: #61dafb;
 }
 
+.app-container {
+  background-color: #003366;
+}
+
 .search-input:focus {
   outline: none;
   box-shadow: none;
@@ -44,8 +49,9 @@
 }
 
 .search-bar {
-  transition: all 0.3s ease-in-out;
-  box-shadow: 5px 5px 10px #c8c8c8;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 5px 5px 10px var(--shadow-color);
+  background-color: #fff;
 }
 
 .search-bar p {
@@ -53,33 +59,37 @@
 }
 
 .search-bar:hover {
-  box-shadow: 5px 5px 25px #c8c8c8;
+  box-shadow: 5px 5px 25px var(--shadow-color);
 }
 
 .search-bar:focus-within {
   transform: scale(1.03, 1.03);
-  box-shadow: 5px 5px 25px #c8c8c8;
+  box-shadow: 5px 5px 25px var(--shadow-color);
 }
 
 h1 {
   font-size: 80px;
   margin-top: -50px;
   font-family: 'Noto Sans SC', sans-serif;
-  color: var(--main-color);
+  color: #ddd;
 }
 
 .search-results-header {
   position: fixed;
   padding-top: 25px;
   transform: scale(0.8, 0.8);
+  z-index: 100;
 }
 
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.timeline-container {
+  padding-top: 150px;
 }
+
+.article-summary {
+  height: 150px;
+  overflow: scroll;
+}
+
+.article-summary::-webkit-scrollbar {display:none;}
+
+.article-link {}

@@ -11,11 +11,7 @@ function getWindowDimensions() {
 const {width, height} = getWindowDimensions();
 
 
-const search = (query) => {
-    return [];
-}
-
-function SearchBar({query, setQuery, searchHook}) {
+function SearchBar({query, setQuery, searchHook, onSubmit}) {
 
     return (
             <form
@@ -52,8 +48,9 @@ function SearchBar({query, setQuery, searchHook}) {
                 />
                 <button className="search-button" onClick={(e) => {
                     e.preventDefault();
-                    search(query);
                     searchHook(true);
+                    e.currentTarget.blur();
+                    onSubmit();
                 }}
                     style={{
                         border: 0,
