@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import auto, Enum, unique
-from typing import NamedTuple, Optional
+from typing import NamedTuple, Optional, FrozenSet
 
 
 @unique
