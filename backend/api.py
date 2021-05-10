@@ -6,6 +6,8 @@ import os
 from utils import *
 from typing import Optional, Iterable
 from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime
+import pytz
 
 app = FastAPI()
 
@@ -38,9 +40,21 @@ def setup_db():
             title=article.title,
             summary=article.summary,
             link=article.url,
-            vector=vec
+            vector=vec,
+            date=article.publish_date,
+            publisher=article.news_source.name,
+            rating=article.news_source.rating.name,
+            site_link=article.news_source.url
         )
         doc_vecs_db[key] = news_article
+    doc_vecs_db.commit()
+    doc_vecs_db.close()
+
+
+def clear_db(db_path):
+    doc_vecs_db = SqliteDict(db_path)
+    for key in doc_vecs_db.keys():
+        del doc_vecs_db[key]
     doc_vecs_db.commit()
     doc_vecs_db.close()
 
@@ -54,30 +68,52 @@ async def get_articles(q: str,
     if len(results) > 0:
         return {"results": results}
     else:
-        search_results = []
-        doc_ids = get_nearest(processed_query, k=n_results)
-        doc_db = SqliteDict(doc_vecs_db_path)
-        # Extract document information based on ids
-        for doc_id in doc_ids:
-            document = doc_db[doc_id]
-            doc_dict = {
-                "title": document.title,
-                "summary": document.summary,
-                "link": document.link
-            }
-            search_results.append(doc_dict)
-        doc_db.close()
-        # Add query we haven't seen to db
-        query_map_db = SqliteDict(query_map_path)
-        query_map_db[q] = processed_query
-        query_map_db.commit()
-        query_map_db.close()
+        search_results = get_new_search_results(q, processed_query, n_results)
+        return {"results": sort_search_by_date(search_results)}
 
-        query_db = SqliteDict(query_db_path)
-        query_db[q] = search_results
-        query_db.commit()
-        query_db.close()
-        return {"results": search_results}
+
+# Isolate function to generate new search results in case queries need to be updated
+def get_new_search_results(q: str, processed_query: BagOfWordsVector, k: int) -> list:
+    search_results = []
+    doc_ids = get_nearest(processed_query, k=k)
+    doc_db = SqliteDict(doc_vecs_db_path)
+    # Extract document information based on ids
+    for doc_id in doc_ids:
+        document = doc_db[doc_id]
+        doc_dict = {
+            "title": document.title,
+            "summary": document.summary,
+            "link": document.link,
+            "date": document.date if hasattr(document, "date") else datetime.min.replace(tzinfo=pytz.UTC),
+            "rating": document.rating,
+            "publisher": document.publisher,
+            "site": document.site_link
+        }
+        search_results.append(doc_dict)
+
+    doc_db.close()
+    # Add query we haven't seen to db
+    query_map_db = SqliteDict(query_map_path)
+    query_map_db[q] = processed_query
+    query_map_db.commit()
+    query_map_db.close()
+
+    query_db = SqliteDict(query_db_path)
+    query_db[q] = search_results
+    query_db.commit()
+    query_db.close()
+    return search_results
+
+
+def get_key_from_document(document) -> datetime:
+    if document["date"] is not None:
+        return document["date"].replace(tzinfo=pytz.UTC)
+    else:
+        return datetime.min.replace(tzinfo=pytz.UTC)
+
+
+def sort_search_by_date(search_results: list) -> list:
+    return sorted(search_results, key=get_key_from_document, reverse=True)
 
 
 # Check db to see if we've precomputed a similar query already
@@ -165,6 +201,14 @@ def get_nearest(query_vec: BagOfWordsVector,
     return results
 
 
+@app.post("/query/update")
+def relevance_feedback():
+    return
+
+
 if __name__ == "__main__":
+    #clear_db(doc_vecs_db_path)
+    clear_db(query_map_path)
+    clear_db(query_db_path)
     #setup_db()
     uvicorn.run(app, host="0.0.0.0", port=8000)

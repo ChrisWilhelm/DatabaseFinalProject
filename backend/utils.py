@@ -5,6 +5,9 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from newspaper import Article
 from collections import defaultdict
+from typing import Optional
+from datetime import datetime
+from custom_types import Rating
 
 stop_words = set(stopwords.words('english'))
 # typedefs
@@ -17,6 +20,10 @@ class Document(NamedTuple):
     title: str
     summary: str
     vector: dict
+    date: Optional[datetime]
+    publisher: Optional[str]
+    rating: Optional[str]
+    site_link: Optional[str]
 
     def __repr__(self):
         return (f"doc_id: {self.doc_id}\n" +
