@@ -175,7 +175,7 @@ def get_max_sim(q1: BagOfWordsVector,
     max_sim_query = ""
     max_sim_score = -1
     for query, vector in queries:
-        sim_score = sim(q1, vector)
+        sim_score = sim(q1, string2vec(query))
         if sim_score > max_sim_score:
             max_sim_score = sim_score
             max_sim_query = query
