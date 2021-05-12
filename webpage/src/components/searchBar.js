@@ -48,7 +48,7 @@ function SearchBar({query, setQuery, searchHook, onSubmit}) {
                 />
                 <button className="search-button" onClick={(e) => {
                     e.preventDefault();
-                    searchHook(true);
+                    searchHook();
                     e.currentTarget.blur();
                     onSubmit();
                 }}

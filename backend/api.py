@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
+from pydantic import BaseModel
 import uvicorn
 import pickle
 from sqlitedict import SqliteDict
@@ -9,12 +10,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 import pytz
 from tqdm import tqdm
+from custom_types import Story
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"]
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"]
 )
 
 db_path = os.path.join(app.root_path, "db")
@@ -28,9 +32,20 @@ query_map_path = os.path.join(db_path, "query_map.db")
 doc_vecs_db_path = os.path.join(db_path, "doc_vecs.db")
 
 
+def remove_repeat_articles(articles: list[Story]) -> list[Story]:
+    new_article_info = set()
+    new_articles = []
+    for article in articles:
+        if (article.news_source.name, article.title) not in new_article_info:
+            new_articles.append(article)
+            new_article_info.add((article.news_source.name, article.title))
+    return new_articles
+
+
 def setup_db():
     with open("../stories.pickle", "rb") as fp:
         articles = pickle.load(fp)
+    articles = remove_repeat_articles(articles)
     doc_vecs_db = SqliteDict(doc_vecs_db_path)
     article_weights = ArticleDataWeights(author=5, keywords=3, summary=1, title=4, publisher=5)
     print("Preprocessing: tokenizing data...")
@@ -91,6 +106,7 @@ def get_new_search_results(q: str, processed_query: BagOfWordsVector, k: int) ->
     for doc_id in doc_ids:
         document = doc_db[doc_id]
         doc_dict = {
+            "doc_id": document.doc_id,
             "title": document.title,
             "summary": document.summary,
             "link": document.link,
@@ -211,14 +227,106 @@ def get_nearest(query_vec: BagOfWordsVector,
     return results
 
 
+class QueryUpdate(BaseModel):
+    q: str
+    undo: bool
+    relevant: Optional[list[int]] = None
+    irrelevant: Optional[list[int]] = None
+
+
 @app.post("/query/update")
-def relevance_feedback():
-    return
+async def relevance_feedback(body: QueryUpdate):
+    if not body.undo:
+        update_query(body.q, body.relevant, body.irrelevant)
+    else:
+        undo_update_query(body.q, body.relevant, body.irrelevant)
 
 
+def update_query(q: str,
+                 relevant: list[int] = None,
+                 irrelevant: list[int] = None,
+                 alpha=0.9,
+                 beta=0.1):
+    query_vector = try_to_get_query_from_db(q)
+    query_vector = add_docs_to_query_vector(query_vector, relevant, alpha)
+    query_vector = subtract_docs_from_query_vector(query_vector, irrelevant, beta)
+    put_query_in_map_db(q, query_vector)
+    recompute_search_results(q, query_vector)
+
+
+def undo_update_query(q: str,
+                      relevant: list[int] = None,
+                      irrelevant: list[int] = None,
+                      alpha=0.9,
+                      beta=0.1):
+    query_vector = try_to_get_query_from_db(q)
+    query_vector = add_docs_to_query_vector(query_vector, irrelevant, alpha)
+    query_vector = subtract_docs_from_query_vector(query_vector, relevant, beta)
+    put_query_in_map_db(q, query_vector)
+    recompute_search_results(q, query_vector)
+
+
+def try_to_get_query_from_db(q: str) -> BagOfWordsVector:
+    query_map = SqliteDict(query_map_path)
+    try:
+        query_vector = query_map[q]
+        query_map.close()
+        return query_vector
+    except KeyError:
+        query_map.close()
+        raise HTTPException
+
+
+def add_docs_to_query_vector(query_vector: BagOfWordsVector,
+                             docs: list[int],
+                             alpha: float) -> BagOfWordsVector:
+    doc_db = SqliteDict(doc_vecs_db_path)
+    for doc_id in docs:
+        doc_vector = try_to_get_doc_vector_from_db(doc_id, doc_db)
+        query_vector = add_vectors(query_vector, scalar_multiply(doc_vector, alpha))
+    doc_db.close()
+    return query_vector
+
+
+def try_to_get_doc_vector_from_db(doc_id: int, doc_db: SqliteDict) -> BagOfWordsVector:
+    vector = {}
+    try:
+        vector = doc_db[doc_id].vector
+    except KeyError:
+        pass
+    return vector
+
+
+def subtract_docs_from_query_vector(query_vector: BagOfWordsVector,
+                                    docs: list[int],
+                                    beta: float) -> BagOfWordsVector:
+    doc_db = SqliteDict(doc_vecs_db_path)
+    for doc_id in docs:
+        doc_vector = try_to_get_doc_vector_from_db(doc_id, doc_db)
+        query_vector = subtract_vectors(query_vector, scalar_multiply(doc_vector, beta))
+    doc_db.close()
+    return query_vector
+
+
+def put_query_in_map_db(q: str, query_vector: BagOfWordsVector):
+    query_map = SqliteDict(query_map_path)
+    query_map[q] = query_vector
+    query_map.commit()
+    query_map.close()
+
+
+def recompute_search_results(q: str, query_vector: BagOfWordsVector):
+    results = get_nearest(query_vector)
+    query_db = SqliteDict(query_db_path)
+    query_db[q] = results
+    query_db.commit()
+    query_db.close()
+
+
+#TODO argument parser
 if __name__ == "__main__":
-    #clear_db(doc_vecs_db_path)
+    clear_db(doc_vecs_db_path)
     clear_db(query_map_path)
     clear_db(query_db_path)
-    #setup_db()
+    setup_db()
     uvicorn.run(app, host="0.0.0.0", port=8000)
