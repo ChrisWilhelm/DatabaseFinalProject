@@ -316,14 +316,6 @@ def put_query_in_map_db(q: str, query_vector: BagOfWordsVector):
     query_map.close()
 
 
-def recompute_search_results(q: str, query_vector: BagOfWordsVector, k=20):
-    results = get_new_search_results(query_vector, k=k)
-    query_db = SqliteDict(query_db_path)
-    query_db[q] = results
-    query_db.commit()
-    query_db.close()
-
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--reset_db", dest="reset_db", action="store_true")
 parser.set_defaults(reset_db=False)
