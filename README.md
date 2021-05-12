@@ -31,7 +31,7 @@ and `--reset_cache`.
 
 Once the backend is running, open another terminal 
 and navigate to the project root folder (`IR_FinalProject`).
-Then, navigate to the frontend folder with `cd frontend`.
+Then, navigate to the webpage folder with `cd webpage`.
 To install the required packages, type `npm install` into the 
 command line. Once all packages are installed, type `npm start` into
 the command line. This will start a development server and you can 
