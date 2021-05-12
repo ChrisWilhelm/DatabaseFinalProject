@@ -11,6 +11,7 @@ from datetime import datetime
 import pytz
 from tqdm import tqdm
 from custom_types import Story
+import argparse
 
 app = FastAPI()
 
@@ -251,7 +252,7 @@ def update_query(q: str,
     query_vector = add_docs_to_query_vector(query_vector, relevant, alpha)
     query_vector = subtract_docs_from_query_vector(query_vector, irrelevant, beta)
     put_query_in_map_db(q, query_vector)
-    recompute_search_results(q, query_vector)
+    get_new_search_results(q, query_vector, k=20)
 
 
 def undo_update_query(q: str,
@@ -263,7 +264,7 @@ def undo_update_query(q: str,
     query_vector = add_docs_to_query_vector(query_vector, irrelevant, alpha)
     query_vector = subtract_docs_from_query_vector(query_vector, relevant, beta)
     put_query_in_map_db(q, query_vector)
-    recompute_search_results(q, query_vector)
+    get_new_search_results(q, query_vector, k=20)
 
 
 def try_to_get_query_from_db(q: str) -> BagOfWordsVector:
@@ -315,18 +316,27 @@ def put_query_in_map_db(q: str, query_vector: BagOfWordsVector):
     query_map.close()
 
 
-def recompute_search_results(q: str, query_vector: BagOfWordsVector):
-    results = get_nearest(query_vector)
+def recompute_search_results(q: str, query_vector: BagOfWordsVector, k=20):
+    results = get_new_search_results(query_vector, k=k)
     query_db = SqliteDict(query_db_path)
     query_db[q] = results
     query_db.commit()
     query_db.close()
 
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--reset_db", dest="reset_db", action="store_true")
+parser.set_defaults(reset_db=False)
+parser.add_argument("--reset_cache", dest="reset_cache", action="store_true")
+parser.set_defaults(reset_cache=False)
+args = parser.parse_args()
+
 #TODO argument parser
 if __name__ == "__main__":
-    clear_db(doc_vecs_db_path)
-    clear_db(query_map_path)
-    clear_db(query_db_path)
-    setup_db()
+    if args.reset_db:
+        clear_db(doc_vecs_db_path)
+        setup_db()
+    if args.reset_cache:
+        clear_db(query_map_path)
+        clear_db(query_db_path)
     uvicorn.run(app, host="0.0.0.0", port=8000)

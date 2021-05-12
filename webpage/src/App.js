@@ -217,7 +217,7 @@ const ArticleBody = ({article, index, query}) => {
            }}>
                <div>
                    <a className={"article-link"}
-                       target={"blank"} href={article.link}>Link</a>
+                       target={"blank"} href={article.link}>Article</a>
                    <a className={"site-link"}
                       target={"blank"}
                       href={article.site}>Site Home Page</a>
