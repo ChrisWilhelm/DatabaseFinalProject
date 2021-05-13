@@ -21,7 +21,7 @@ Then type `source ./venv/bin/activate`
 To install the required python packages, use the command 
 `pip3 install -r requirements.txt`
 
-Now, everything is set up to run the REST api. To
+Now, everything is set up to run the REST API. To
 start the server, run the command `python backend/api.py --reset_db --reset_cache`.
 This may take a few seconds to start because the script needs to
 populate the document database. If you have run the script in the past 
