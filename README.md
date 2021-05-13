@@ -21,6 +21,8 @@ Then type `source ./venv/bin/activate`
 To install the required python packages, use the command 
 `pip3 install -r requirements.txt`
 
+You may need to download the `stopwords` NLTK resource if not already downloaded. If this is indeed the case, a `LookupError` will occur when initializing the database and instructions on how to use the NLTK Downloader to obtain this resource will be printed to the console.
+
 Now, everything is set up to run the REST API. To
 start the server, run the command `python backend/api.py --reset_db --reset_cache`.
 This may take a few seconds to start because the script needs to
