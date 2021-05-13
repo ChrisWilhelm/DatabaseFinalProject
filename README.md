@@ -37,6 +37,7 @@ command line. Once all packages are installed, type `npm start` into
 the command line. This will start a development server and you can 
 play with the application.
 
+#### A demo of this application is available [here](https://youtu.be/Xso2Z3c4dII)
 
 There were 432 news source candidates in the original dump from AllSides Media Bias Ratings, but only 358 news sources
 were actually valid. The [source stub](media_bias_table.html) was saved from
