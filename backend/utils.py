@@ -1,8 +1,6 @@
-from collections import Counter
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime
-from typing import NamedTuple, Union, Iterable
-from typing import Optional
+from typing import Iterable, Optional, NamedTuple, Union
 
 import numpy as np
 from nltk.corpus import stopwords
@@ -109,10 +107,10 @@ def string2vec(sentence: str) -> BagOfWordsVector:
     '''
     words = word_tokenize(sentence)
     new_words = [word for word in words if word.isalnum()]
-    vec = {}
+    vec = defaultdict(int)
     for word in new_words:
-        vec[word] = 1
-    return vec
+        vec[word] += 1
+    return dict(vec)
 
 
 # run all query preprocessing from this function

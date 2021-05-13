@@ -43,7 +43,7 @@ def remove_repeat_articles(articles: list[Story]) -> list[Story]:
 
 
 def setup_db() -> None:
-    with open("stories.pickle", "rb") as fp:
+    with open("../stories.pickle", "rb") as fp:
         articles = pickle.load(fp)
     articles = remove_repeat_articles(articles)
     doc_vecs_db = SqliteDict(doc_vecs_db_path)
@@ -187,11 +187,11 @@ def sort_by_sim(query_vec: BagOfWordsVector, doc_pairs: list, sim=cosine_sim) ->
         Linear search through documents. doc_pairs must be a tuple list of
         (<doc_id>, <sparse_doc_vector>) tuples
         """
-    results_with_score = [(doc_id, sim(query_vec, doc_vec))
-                          for doc_id, doc_vec in doc_pairs]
-    results_with_score = sorted(results_with_score, key=lambda x: -x[1])
-    results = [x[0] for x in results_with_score]
-    return results
+    results_with_score = sorted(((doc_id, sim(query_vec, doc_vec))
+                                 for doc_id, doc_vec in doc_pairs),
+                                key=lambda item: item[1],
+                                reverse=True)
+    return [item[0] for item in results_with_score]
 
 
 # returns true if doc sim is greater than threshold
@@ -207,15 +207,17 @@ def search_by_threshold(query_vec: BagOfWordsVector, doc_pairs: list, thresh: fl
 
 
 # returns k nearest neighbor documents
-def search_by_knn(query_vec: BagOfWordsVector, doc_pairs: list, k: int, sim=cosine_sim) -> list:
+def search_by_knn(query_vec: BagOfWordsVector, doc_pairs: list, k: int, sim=cosine_sim,
+                  return_all: bool = False) -> list:
     results = sort_by_sim(query_vec, doc_pairs, sim=sim)
-    return results[:k]
+    return results if return_all else results[:k]
 
 
 def get_nearest(query_vec: BagOfWordsVector,
-                k=20,
-                thresh=0,
-                sim=cosine_sim) -> list:
+                k: int = 20,
+                thresh: int = 0,
+                sim=cosine_sim,
+                return_all: bool = False) -> list:
     # Generate tuple list with entries in the form of (<doc_id>, <doc_vector>)
     db = SqliteDict(doc_vecs_db_path)
     doc_pairs = [(key, value.vector) for key, value in db.items()]
@@ -223,7 +225,7 @@ def get_nearest(query_vec: BagOfWordsVector,
     if thresh != 0:
         results = search_by_threshold(query_vec, doc_pairs, thresh, sim=sim)
     else:
-        results = search_by_knn(query_vec, doc_pairs, k, sim=sim)
+        results = search_by_knn(query_vec, doc_pairs, k, sim=sim, return_all=return_all)
     return results
 
 

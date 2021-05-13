@@ -1,5 +1,6 @@
 bs4
 fastapi
+GoogleNews
 newspaper3k
 nltk
 numpy
