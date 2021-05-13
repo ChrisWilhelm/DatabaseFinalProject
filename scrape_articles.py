@@ -4,7 +4,7 @@ from pickle import dump, HIGHEST_PROTOCOL, load
 from newspaper import Article, build, Source
 from tqdm import tqdm
 
-from custom_types import NewsSource, Story
+from backend.custom_types import NewsSource, Story
 
 CHUNKSIZE = 10
 

@@ -1,14 +1,13 @@
+from collections import Counter
+from collections import defaultdict
+from datetime import datetime
 from typing import NamedTuple, Union, Iterable
-from numpy.linalg import norm
-from nltk import SnowballStemmer
+from typing import Optional
+
+import numpy as np
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
-from newspaper import Article
-from collections import defaultdict
-from typing import Optional
-from datetime import datetime
-from collections import Counter
-import numpy as np
+from numpy.linalg import norm
 from tqdm import tqdm
 
 stop_words = set(stopwords.words('english'))
@@ -93,19 +92,6 @@ class ArticleWeights(NamedTuple):
     news_source: int
 
 
-def article2vec(article: Article, weights: ArticleWeights) -> BagOfWordsVector:
-    '''
-    Transforms instance of class Article into sparse vector representation
-    '''
-    vec = defaultdict(float)
-    for word in article.keywords:
-        vec[word] += weights.keywords
-    for word in article.authors:
-        vec[word] += weights.authors
-    vec[article.news_source.name] += weights.news_source
-    return vec
-
-
 def is_useful_word(word):
     if word.isalnum() and word not in stop_words:
         return True
@@ -156,6 +142,7 @@ class ArticleData(NamedTuple):
     def sections(self):
         return [self.title, self.summary, self.author, self.publisher]
 
+
 class ArticleDataWeights(NamedTuple):
     title: float
     summary: float
@@ -200,14 +187,14 @@ def compute_tf(doc: ArticleData, weights: ArticleDataWeights):
 def compute_tfidf(doc: ArticleData, doc_freqs: DocFreqs, weights: ArticleDataWeights):
     tf = compute_tf(doc, weights)
     tf_idf = {}
-    N = doc_freqs.get_num_docs()
+    n = doc_freqs.get_num_docs()
     for word in tf.keys():
-        tf_idf[word] = tf[word] * np.log(N / (1 + doc_freqs[word]))
+        tf_idf[word] = tf[word] * np.log(n / (1 + doc_freqs[word]))
     return tf_idf
 
 
-def generate_doc_tfidfs(docs: Iterable[ArticleData], weights: ArticleDataWeights, verbose=True) \
-        -> list[BagOfWordsVector]:
+def generate_doc_tfidfs(docs: Iterable[ArticleData], weights: ArticleDataWeights,
+                        verbose=True) -> list[BagOfWordsVector]:
     doc_freqs = compute_doc_freq(docs)
     vectors = []
     if verbose:
@@ -218,4 +205,3 @@ def generate_doc_tfidfs(docs: Iterable[ArticleData], weights: ArticleDataWeights
         for doc in docs:
             vectors.append(compute_tfidf(doc, doc_freqs, weights))
     return vectors
-

@@ -1,8 +1,11 @@
 bs4
-newspaper3k
-requests
-tqdm
 fastapi
-uvicorn==0.13.4
-sqlitedict
+newspaper3k
+nltk
+numpy
+pydantic
 pytz
+requests
+sqlitedict
+tqdm
+uvicorn==0.13.4

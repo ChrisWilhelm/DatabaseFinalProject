@@ -1,17 +1,16 @@
-from fastapi import FastAPI, HTTPException, Request
-from pydantic import BaseModel
-import uvicorn
-import pickle
-from sqlitedict import SqliteDict
 import os
-from utils import *
-from typing import Optional, Iterable
-from fastapi.middleware.cors import CORSMiddleware
-from datetime import datetime
+import pickle
+from argparse import ArgumentParser
+
 import pytz
-from tqdm import tqdm
+import uvicorn
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from sqlitedict import SqliteDict
+
 from custom_types import Story
-import argparse
+from utils import *
 
 app = FastAPI()
 
@@ -43,22 +42,24 @@ def remove_repeat_articles(articles: list[Story]) -> list[Story]:
     return new_articles
 
 
-def setup_db():
-    with open("../stories.pickle", "rb") as fp:
+def setup_db() -> None:
+    with open("stories.pickle", "rb") as fp:
         articles = pickle.load(fp)
     articles = remove_repeat_articles(articles)
     doc_vecs_db = SqliteDict(doc_vecs_db_path)
     article_weights = ArticleDataWeights(author=5, keywords=3, summary=1, title=4, publisher=5)
-    print("Preprocessing: tokenizing data...")
     article_data = [ArticleData(
         title=tokenize_string(article.title),
         summary=tokenize_string(article.summary),
         keywords=article.keywords,
         author=article.authors,
-        publisher=[article.news_source.name]) for article in tqdm(articles)]
+        publisher=[article.news_source.name]) for article in tqdm(articles,
+                                                                  total=len(articles),
+                                                                  desc="Preprocessing: tokenizing data")]
     vectors = generate_doc_tfidfs(article_data, article_weights)
-    print("Preprocessing: Adding vectors to database...")
-    for i, article in tqdm(enumerate(articles)):
+    for i, article in enumerate(tqdm(articles,
+                                     total=len(articles),
+                                     desc="Preprocessing: Adding vectors to database")):
         key = i
         news_article = Document(
             doc_id=key,
@@ -76,9 +77,9 @@ def setup_db():
     doc_vecs_db.close()
 
 
-def clear_db(db_path):
-    doc_vecs_db = SqliteDict(db_path)
-    print("Clearing db {}".format(db_path))
+def clear_db(db_path_shadow: str) -> None:
+    doc_vecs_db = SqliteDict(db_path_shadow)
+    print("Clearing db {}".format(db_path_shadow))
     for key in tqdm(doc_vecs_db.keys()):
         del doc_vecs_db[key]
     doc_vecs_db.commit()
@@ -86,9 +87,7 @@ def clear_db(db_path):
 
 
 @app.get("/query")
-async def get_articles(q: str,
-                       n_results: Optional[int] = 20,
-                       result_range: Optional[tuple] = None):
+async def get_articles(q: str, n_results: Optional[int] = 20) -> dict:
     # first see if we have a cached result
     results, processed_query = check_for_cached_result(q)
     if len(results) > 0:
@@ -236,7 +235,7 @@ class QueryUpdate(BaseModel):
 
 
 @app.post("/query/update")
-async def relevance_feedback(body: QueryUpdate):
+async def relevance_feedback(body: QueryUpdate) -> None:
     if not body.undo:
         update_query(body.q, body.relevant, body.irrelevant)
     else:
@@ -247,7 +246,7 @@ def update_query(q: str,
                  relevant: list[int] = None,
                  irrelevant: list[int] = None,
                  alpha=0.9,
-                 beta=0.1):
+                 beta=0.1) -> None:
     query_vector = try_to_get_query_from_db(q)
     query_vector = add_docs_to_query_vector(query_vector, relevant, alpha)
     query_vector = subtract_docs_from_query_vector(query_vector, irrelevant, beta)
@@ -258,8 +257,8 @@ def update_query(q: str,
 def undo_update_query(q: str,
                       relevant: list[int] = None,
                       irrelevant: list[int] = None,
-                      alpha=0.9,
-                      beta=0.1):
+                      alpha: float = 0.9,
+                      beta: float = 0.1) -> None:
     query_vector = try_to_get_query_from_db(q)
     query_vector = add_docs_to_query_vector(query_vector, irrelevant, alpha)
     query_vector = subtract_docs_from_query_vector(query_vector, relevant, beta)
@@ -309,22 +308,20 @@ def subtract_docs_from_query_vector(query_vector: BagOfWordsVector,
     return query_vector
 
 
-def put_query_in_map_db(q: str, query_vector: BagOfWordsVector):
+def put_query_in_map_db(q: str, query_vector: BagOfWordsVector) -> None:
     query_map = SqliteDict(query_map_path)
     query_map[q] = query_vector
     query_map.commit()
     query_map.close()
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--reset_db", dest="reset_db", action="store_true")
-parser.set_defaults(reset_db=False)
-parser.add_argument("--reset_cache", dest="reset_cache", action="store_true")
-parser.set_defaults(reset_cache=False)
-args = parser.parse_args()
-
-
-if __name__ == "__main__":
+def main() -> None:
+    parser = ArgumentParser()
+    parser.add_argument("--reset_db", dest="reset_db", action="store_true")
+    parser.set_defaults(reset_db=False)
+    parser.add_argument("--reset_cache", dest="reset_cache", action="store_true")
+    parser.set_defaults(reset_cache=False)
+    args = parser.parse_args()
     if args.reset_db:
         clear_db(doc_vecs_db_path)
         setup_db()
@@ -332,3 +329,7 @@ if __name__ == "__main__":
         clear_db(query_map_path)
         clear_db(query_db_path)
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+if __name__ == "__main__":
+    main()

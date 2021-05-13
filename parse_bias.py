@@ -1,6 +1,6 @@
 from concurrent.futures import as_completed, ThreadPoolExecutor
 from bs4 import BeautifulSoup, SoupStrainer
-from custom_types import NewsSource, Rating
+from backend.custom_types import NewsSource, Rating
 from pickle import dump, HIGHEST_PROTOCOL
 from requests import get
 from tqdm import tqdm
