@@ -39,6 +39,10 @@ play with the application.
 
 #### A demo of this application is available [here](https://youtu.be/Xso2Z3c4dII)
 
+![](./screenshots/NewsLine1.PNG)
+
+![](./screenshots/NewsLine2.png)
+
 There were 432 news source candidates in the original dump from AllSides Media Bias Ratings, but only 358 news sources
 were actually valid. The [source stub](media_bias_table.html) was saved from
 [here](https://www.allsides.com/media-bias/media-bias-ratings?field_featured_bias_rating_value=All&field_news_source_type_tid%5B2%5D=2&field_news_bias_nid_1%5B1%5D=1&field_news_bias_nid_1%5B2%5D=2&field_news_bias_nid_1%5B3%5D=3&title=)
