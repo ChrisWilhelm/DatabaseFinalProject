@@ -55,11 +55,11 @@ def setup_db() -> None:
         author=article.authors,
         publisher=[article.news_source.name]) for article in tqdm(articles,
                                                                   total=len(articles),
-                                                                  desc="Preprocessing: tokenizing data")]
+                                                                  desc="Pre-processing: Tokenizing data")]
     vectors = generate_doc_tfidfs(article_data, article_weights)
     for i, article in enumerate(tqdm(articles,
                                      total=len(articles),
-                                     desc="Preprocessing: Adding vectors to database")):
+                                     desc="Pre-processing: Adding vectors to database")):
         key = i
         news_article = Document(
             doc_id=key,
