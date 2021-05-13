@@ -323,7 +323,7 @@ parser.add_argument("--reset_cache", dest="reset_cache", action="store_true")
 parser.set_defaults(reset_cache=False)
 args = parser.parse_args()
 
-#TODO argument parser
+
 if __name__ == "__main__":
     if args.reset_db:
         clear_db(doc_vecs_db_path)
