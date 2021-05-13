@@ -2,42 +2,23 @@
 
 ### How to run this code
 
-To run this code for the first time, you must have Node.js
-and Python 3.9 installed. To install Node.js, please visit [this link](https://nodejs.org/en/download/).
-To download Python 3.9, please visit [this link](https://www.python.org/downloads/).
+To run this code for the first time, you must have Node.js and Python 3.9 installed. To install Node.js, please visit [this link](https://nodejs.org/en/download/). To download Python 3.9, please visit [this link](https://www.python.org/downloads/).
 
-Once you have those two things, clone this repository in any folder by typing 
+Once you have those two things, clone this repository in any folder by typing `git clone https://github.com/agking10/IR_FinalProject.git` from the command line.
 
-`git clone https://github.com/agking10/IR_FinalProject.git`
+Next, navigate to this folder by typing `cd IR_FinalProject`.
 
-from the command line.
+To create a virtual environment, type `python -m venv venv` and then type `source ./venv/bin/activate`.
 
-Next, navigate to this folder by typing `cd IR_FinalProject`
-
-To create a virtual environment, type `python -m venv venv`
-
-Then type `source ./venv/bin/activate`
-
-To install the required python packages, use the command 
-`pip3 install -r requirements.txt`
+To install the required python packages, use the command `pip3 install -r requirements.txt`.
 
 You may need to download the `stopwords` NLTK resource if not already downloaded. If this is indeed the case, a `LookupError` will occur when initializing the database and instructions on how to use the NLTK Downloader to obtain this resource will be printed to the console.
 
-Now, everything is set up to run the REST API. To
-start the server, run the command `python backend/api.py --reset_db --reset_cache`.
-This may take a few seconds to start because the script needs to
-populate the document database. If you have run the script in the past 
-and know that the databases are populated,
-you can avoid recreating the databases by removing the flags `--reset_db` 
-and `--reset_cache`.
+Now, everything is set up to run the REST API. To start the server, run the command `python backend/api.py --reset_db --reset_cache`. This may take a few seconds to start because the script needs to populate the document database. If you have run the script in the past and know that the databases are populated, you can avoid recreating the databases by removing the flags `--reset_db` and `--reset_cache`.
 
-Once the backend is running, open another terminal 
-and navigate to the project root folder (`IR_FinalProject`).
-Then, navigate to the webpage folder with `cd webpage`.
-To install the required packages, type `npm install` into the 
-command line. Once all packages are installed, type `npm start` into
-the command line. This will start a development server and you can 
-play with the application.
+Once the backend is running, open another terminal and navigate to the project root folder (`IR_FinalProject`), then navigate to the webpage folder with `cd webpage`.
+
+First, `yarn` must be installed. You can do so by running the command `npm install --global yarn`. Then, you may need to run `yarn add reactstrap`. After that, `yarn build` should make a production build. Once this completes, you can install the additional required packages by typing `npm install` into the command line. Once all of these packages are installed, typing the command `npm start` should automatically open up the application using a development server allowed you to play around with the application.
 
 #### A demo of this application is available [here](https://youtu.be/Xso2Z3c4dII)
 
