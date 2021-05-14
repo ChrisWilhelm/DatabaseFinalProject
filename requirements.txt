@@ -1,6 +1,7 @@
 bs4
 fastapi
 GoogleNews
+matplotlib
 newspaper3k
 nltk
 numpy
