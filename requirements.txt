@@ -6,7 +6,6 @@ newspaper3k
 nltk
 numpy
 pydantic
-pytz
 requests
 sqlitedict
 tqdm
