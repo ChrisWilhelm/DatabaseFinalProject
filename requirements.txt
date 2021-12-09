@@ -10,3 +10,5 @@ requests
 sqlitedict
 tqdm
 uvicorn==0.13.4
+SQLAlchemy
+pymysql
