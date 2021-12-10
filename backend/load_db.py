@@ -8,8 +8,10 @@ from db_types import *
 from random import random
 
 percent_articles_to_keep : float = 0.1
+aws_ip = "54.211.230.209"
 
-engine = create_engine("mysql+pymysql://db_final:password@54.211.230.209/db_final_db")
+engine = create_engine("mysql+pymysql://db_final:password@" + aws_ip + "/db_final_db")
+# engine = create_engine("mysql+pymysql://21fa_cwilhel8:Lg9CYYSiMP@dbase.cs.jhu.edu/21fa_cwilhel8_db")
 Session = sessionmaker(bind = engine)
 session = Session()
 
@@ -45,10 +47,13 @@ def add_news_source(article):
         session.add(news_source)
         session.commit()
 
+
 if __name__ == "__main__":
     with open("../stories.pickle", "rb") as fp:
         articles = pickle.load(fp)
     articles = remove_repeat_articles(articles)
+    # session.query(Article).delete()
+    # session.query(NewsSource).delete()
     for article in articles:
         add_news_source(article)
 
@@ -64,6 +69,9 @@ if __name__ == "__main__":
             ArticleText=article.text,
             ArticleSummary=article.summary
         )
+
+        # for author in article.authors:
+        #     add_author()
         session.add(new_article)
         session.commit()
         break
