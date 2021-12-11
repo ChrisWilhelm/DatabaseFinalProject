@@ -43,3 +43,15 @@ class NewsSource(Base):
     Homepage = Column(Text, nullable=False)
     BiasID = Column(Integer, ForeignKey("BiasType.BiasID"))
 
+
+class KeyWord(Base):
+    __tablename__ = "KeyWord"
+    KeyWordID = Column(Integer, primary_key=True, nullable=False)
+    KeyWord = Column(Text, nullable=False)
+
+
+class HasKeyWord(Base):
+    __tablename__ = "HasKeyWord"
+    KeyWordID = Column(Integer, ForeignKey("KeyWord.KeyWordID"), primary_key=True, nullable=False)
+    ArticleID = Column(Integer, ForeignKey("Article.ArticleID"), primary_key=True, nullable=False)
+
