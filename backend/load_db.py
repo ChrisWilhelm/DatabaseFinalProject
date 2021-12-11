@@ -31,7 +31,7 @@ def determine_bias_id(article):
 
 
 def keyword_exists(word):
-    return session.query(KeyWord.KeyWordID).filter_by(KeyWord.KeyWord == word).first() is not None
+    return session.query(KeyWord.KeyWordID).filter(KeyWord.KeyWord == word).first() is not None
 
 
 def add_keywords(article):
@@ -40,7 +40,7 @@ def add_keywords(article):
             key_word = KeyWord(
                 KeyWord=keyword
             )
-            session.add(KeyWord)
+            session.add(key_word)
     session.commit()
 
 
@@ -83,11 +83,21 @@ if __name__ == "__main__":
             ArticleText=article.text,
             ArticleSummary=article.summary
         )
-
-        # for author in article.authors:
-        #     add_author()
         session.add(new_article)
         session.commit()
+        article_id = session.query(Article.ArticleID).filter(Article.Aname == new_article.Aname)\
+            .filter(new_article.NewsSourceID == Article.NewsSourceID).first()
+        for keyword in article.keywords:
+            key_wordid = session.query(KeyWord.KeyWordID).filter(KeyWord.KeyWord == keyword).first()
+            has_keyword = HasKeyWord(
+                KeyWordID=key_wordid[0],
+                ArticleID=article_id[0]
+            )
+            session.add(has_keyword)
+        session.commit()
+        # for author in article.authors:
+        #     add_author()
+
         break
 
     result = session.query(Article).all()

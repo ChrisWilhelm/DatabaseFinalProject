@@ -53,5 +53,5 @@ class KeyWord(Base):
 class HasKeyWord(Base):
     __tablename__ = "HasKeyWord"
     KeyWordID = Column(Integer, ForeignKey("KeyWord.KeyWordID"), primary_key=True, nullable=False)
-    ArticleID = Column(Integer, ForeignKey("Article.ArticleID"), primary_key=True, nullable=False)
+    ArticleID = Column(Integer, ForeignKey("Articles.ArticleID"), primary_key=True, nullable=False)
 
