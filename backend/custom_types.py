@@ -1,16 +1,16 @@
 from datetime import datetime
-from enum import auto, Enum, unique
+from enum import auto, Enum, unique, IntEnum
 from typing import NamedTuple, Optional, FrozenSet
 
 
 @unique
-class Rating(Enum):
-    LEFT = auto()
-    LEAN_LEFT = auto()
-    CENTER = auto()
-    LEAN_RIGHT = auto()
-    RIGHT = auto()
-    MIXED = auto()
+class Rating(IntEnum):
+    LEFT = 1
+    LEAN_LEFT = 2
+    CENTER = 3
+    LEAN_RIGHT = 4
+    RIGHT = 5
+    MIXED = 6
 
 
 class NewsSource(NamedTuple):
