@@ -188,6 +188,7 @@ if __name__ == "__main__":
         articles = pickle.load(fp)
     articles = remove_repeat_articles(articles)
     session = Session()
+    # reset DB
     session.query(HasKeyWord).delete()
     session.query(WroteBy).delete()
     session.query(Article).delete()
@@ -196,6 +197,7 @@ if __name__ == "__main__":
     session.commit()
     Session.remove()
 
+    # Process articles in parallel
     print("Processing %d articles" % len(articles))
     articles_processed = 0
     with ThreadPoolExecutor(max_workers=100) as executor:
@@ -206,5 +208,4 @@ if __name__ == "__main__":
                 print("{n} articles processed".format(n=articles_processed))
 
     print("Done!")
-    Session.remove()
 
