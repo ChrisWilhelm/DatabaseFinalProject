@@ -14,6 +14,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 parser = argparse.ArgumentParser()
 
 parser.add_argument("--percent_upload", type=float, default=0.1)
+parser.add_argument("__n_workers", type=int, default=200)
 args = parser.parse_args()
 
 percent_articles_to_keep : float = args.percent_upload
@@ -200,7 +201,7 @@ if __name__ == "__main__":
     # Process articles in parallel
     print("Processing %d articles" % len(articles))
     articles_processed = 0
-    with ThreadPoolExecutor(max_workers=100) as executor:
+    with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
         futures = [executor.submit(process_article, article) for article in articles]
         for i, future in enumerate(as_completed(futures)):
             articles_processed += 1
