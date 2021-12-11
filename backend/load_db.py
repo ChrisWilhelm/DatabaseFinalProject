@@ -44,6 +44,20 @@ def add_keywords(article):
     session.commit()
 
 
+def author_exists(AName):
+    return session.query(Author.AuthorID).filter(Author.AName == AName).first() is not None
+
+
+def add_authors(article):
+    for author in article.authors:
+        if not author_exists(author):
+            new_author = Author(
+                AName=author
+            )
+            session.add(new_author)
+    session.commit()
+
+
 def news_source_exists(article):
     return session \
      .query(NewsSource.NewsSourceID) \
@@ -62,6 +76,13 @@ def add_news_source(article):
         session.commit()
 
 
+def article_not_included(article):
+    news_source_id = session.query(NewsSource.NewsSourceID).filter(NewsSource.NewsSourceName == article.news_source.name).first()
+    if news_source_id is None :
+        return True
+    return session.query(Article).filter(Article.Aname == article.title).filter(Article.NewsSourceID == news_source_id[0]).first() is None
+
+
 if __name__ == "__main__":
     with open("../stories.pickle", "rb") as fp:
         articles = pickle.load(fp)
@@ -69,37 +90,45 @@ if __name__ == "__main__":
     # session.query(Article).delete()
     # session.query(NewsSource).delete()
     for article in articles:
-        add_news_source(article)
-        add_keywords(article)
-        news_source_id = session.query(NewsSource.NewsSourceID)\
-            .filter(NewsSource.NewsSourceName == article.news_source.name)\
-            .first()
+        if article_not_included(article):
+            add_news_source(article)
+            add_keywords(article)
+            add_authors(article)
+            news_source_id = session.query(NewsSource.NewsSourceID)\
+                .filter(NewsSource.NewsSourceName == article.news_source.name)\
+                .first()
 
-        new_article = Article(
-            Aname=article.title,
-            URL=article.url,
-            PublishDate=article.publish_date,
-            NewsSourceID=news_source_id[0],
-            ArticleText=article.text,
-            ArticleSummary=article.summary
-        )
-        session.add(new_article)
-        session.commit()
-        article_id = session.query(Article.ArticleID).filter(Article.Aname == new_article.Aname)\
-            .filter(new_article.NewsSourceID == Article.NewsSourceID).first()
-        for keyword in article.keywords:
-            key_wordid = session.query(KeyWord.KeyWordID).filter(KeyWord.KeyWord == keyword).first()
-            has_keyword = HasKeyWord(
-                KeyWordID=key_wordid[0],
-                ArticleID=article_id[0]
+            new_article = Article(
+                Aname=article.title,
+                URL=article.url,
+                PublishDate=article.publish_date,
+                NewsSourceID=news_source_id[0],
+                ArticleText=article.text,
+                ArticleSummary=article.summary
             )
-            session.add(has_keyword)
-        session.commit()
-        # for author in article.authors:
-        #     add_author()
-
-        break
-
+            session.add(new_article)
+            session.commit()
+            article_id = session.query(Article.ArticleID).filter(Article.Aname == new_article.Aname)\
+                .filter(new_article.NewsSourceID == Article.NewsSourceID).first()
+            for keyword in article.keywords:
+                key_wordid = session.query(KeyWord.KeyWordID).filter(KeyWord.KeyWord == keyword).first()
+                has_keyword = HasKeyWord(
+                    KeyWordID=key_wordid[0],
+                    ArticleID=article_id[0]
+                )
+                session.add(has_keyword)
+            session.commit()
+            for author in article.authors:
+                author_id = session.query(Author.AuthorID).filter(Author.AName == author).first()
+                new_written_by = WroteBy(
+                    ArticleID=article_id[0],
+                    AuthorID=author_id[0]
+                )
+                session.add(new_written_by)
+            session.commit()
+            # for author in article.authors:
+            #     add_author()
+            break
     result = session.query(Article).all()
     for row in result:
         print("Title: ", row.Aname)

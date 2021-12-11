@@ -17,7 +17,7 @@ class Article(Base):
 
 class WroteBy(Base):
     __tablename__ = "WroteBy"
-    ArticleID = Column(Integer, ForeignKey("Article.ArticleID"),
+    ArticleID = Column(Integer, ForeignKey("Articles.ArticleID"),
         primary_key=True)
     AuthorID = Column(Integer, ForeignKey("Author.AuthorID"),
         primary_key=True)
@@ -26,8 +26,7 @@ class WroteBy(Base):
 class Author(Base):
     __tablename__ = "Author"
     AuthorID = Column(Integer, primary_key=True)
-    FName = Column(Text)
-    LName = Column(Text, nullable=False)
+    AName = Column(Text, nullable=False)
 
 
 class BiasType(Base):
