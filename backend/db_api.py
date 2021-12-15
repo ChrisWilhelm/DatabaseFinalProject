@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, MetaData
+from sqlalchemy import create_engine, MetaData, desc
 from sqlalchemy.orm import sessionmaker, scoped_session
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,14 +25,20 @@ metadata = MetaData(bind=engine)
 
 @app.get("/keyword/{word}")
 async def root(word):
-    wordString = str(word)
-    data = dumps(session.query(Article).filter(HasKeyWord.ArticleID == Article.ArticleID).filter(HasKeyWord.KeyWordID == KeyWord.KeyWordID).filter(KeyWord.KeyWord == wordString).all())
-    query2 = loads(data, metadata, Session)
-    return query2
+    word_string = str(word)
+    data = (session.query(Article.ArticleID).filter(HasKeyWord.ArticleID == Article.ArticleID)
+                 .filter(HasKeyWord.KeyWordID == KeyWord.KeyWordID).filter(KeyWord.KeyWord == word_string)
+                 .order_by(desc(Article.PublishDate)).all())
+    result = []
+    for d in data:  # had to get rest of the data separately because of memory sort issue
+        result.append(session.query(Article).filter(Article.ArticleID == d[0]).all())
+    return result
+
+
 
 
 def main() -> None:
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8080)
 
 
 if __name__ == "__main__":
