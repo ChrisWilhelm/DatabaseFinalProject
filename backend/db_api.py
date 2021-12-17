@@ -1,9 +1,8 @@
-from sqlalchemy import create_engine, MetaData, desc
+from sqlalchemy import create_engine, MetaData, text
 from sqlalchemy.orm import sessionmaker, scoped_session
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.serializer import loads, dumps
-
 from backend.utils import process_query, BagOfWordsVector, cosine_sim
 from db_types import *
 from fastapi import FastAPI
@@ -22,6 +21,8 @@ engine = create_engine("mysql+pymysql://db_final:password@" + aws_ip + "/db_fina
 session_factory = sessionmaker(bind=engine)
 Session = scoped_session(session_factory)
 session = Session()
+raw_conn = session.connection().engine.raw_connection()
+cur = raw_conn.cursor()
 metadata = MetaData(bind=engine)
 
 
@@ -51,9 +52,8 @@ async def get_articles(q: str, n_results: int = 20) -> dict:
 
 
 def get_new_search_results(q: str, processed_query: BagOfWordsVector, k: int) -> list:
-    search_results = []
     article_ids = get_nearest(processed_query, k=k)
-    return search_results
+    return article_ids
 
 
 def get_nearest(processed_query: BagOfWordsVector,
@@ -67,15 +67,19 @@ def get_nearest(processed_query: BagOfWordsVector,
     return article_ids
 
 
-def get_articles_with_similar(s: str) -> set:
+def get_articles_with_similar(s: str) -> list:
     article_ids = []
-    article_ids += session.query(Article.ArticleID).filter(HasKeyWord.ArticleID == Article.ArticleID)\
-        .filter(HasKeyWord.KeyWordID == KeyWord.KeyWordID).filter(KeyWord.KeyWord == s).all()
-    article_ids += session.query(Article.ArticleID).filter(Article.NewsSourceID == NewsSource.NewsSourceID)\
-        .filter(NewsSource.NewsSourceName.ilike("%" + s + "%")).all()
-    article_ids += session.query(Article.ArticleID).filter(Article.ArticleID == WroteBy.ArticleID)\
-        .filter(WroteBy.AuthorID == Author.AuthorID).filter(Author.AName.ilike("%" + s + "%")).all()
-    return set(article_ids)
+    with engine.connect() as conn:
+        result = conn.execute("CALL FindSimilarNewssource(%s)", s)
+        result2 = conn.execute("CALL FindSimilarKeywords(%s)", s)
+        result3 = conn.execute("CALL FindSimilarAuthor(%s)", s)
+        for row in result:
+            article_ids.append(row["ArticleID"])
+        for row in result2:
+            article_ids.append(row["ArticleID"])
+        for row in result3:
+            article_ids.append(row["ArticleID"])
+    return article_ids
 
 
 def main() -> None:
