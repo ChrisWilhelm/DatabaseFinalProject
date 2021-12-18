@@ -1,8 +1,7 @@
-from sqlalchemy import create_engine, MetaData, text
+from sqlalchemy import create_engine, MetaData
 from sqlalchemy.orm import sessionmaker, scoped_session
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.ext.serializer import loads, dumps
 import datetime
 from backend.utils import process_query, BagOfWordsVector, cosine_sim
 from db_types import *
@@ -27,6 +26,11 @@ metadata = MetaData(bind=engine)
 before = ["before"]
 after = ["after"]
 on = ["on"]
+months = ["january", "february", "march", "april",
+          "may", "june", "july", "august", "september",
+          "october", "november", "december"]
+months_abrev = ["jan", "feb", "mar", "apr", "may", "jun",
+                "jul", "aug", "sep", "oct", "nov", "dec"]
 
 
 def remove_repeat_articles(articles: list[Article]) -> list[Article]:
@@ -82,6 +86,44 @@ def get_articles_by_date(date: str, modifier: str):
     return just_articles_ids
 
 
+def check_next_three_words(modifier: str, processed_query: BagOfWordsVector) -> str:
+    curr_date = datetime.datetime.now()
+    list_of_values = []
+    for s in processed_query:
+        list_of_values.append(s)
+    i = list_of_values.index(modifier)
+    result = ""
+    if len(list_of_values) >= i + 2 and list_of_values[i + 1] in months:
+        result += str(months.index(list_of_values[i + 1]) + 1) + "-"
+    elif len(list_of_values) >= i + 2 and list_of_values[i + 1] in months_abrev:
+        result += str(months_abrev.index(list_of_values[i + 1]) + 1) + "-"
+    elif len(list_of_values) >= i + 2 and list_of_values[i + 1].isnumeric() and len(list_of_values[i + 1]) == 4:
+        result += "1-1-" + str(list_of_values[i + 1])
+        return result
+    else:
+        return result
+    if len(list_of_values) >= i + 3 and list_of_values[i + 2].isnumeric() and len(list_of_values[i + 2]) == 4:
+        result += "1-" + str(list_of_values[i + 2])
+    elif len(list_of_values) >= i + 3 and list_of_values[i + 2].isnumeric() and 1 <= len(list_of_values[i + 2]) <= 2:
+        result += str(list_of_values[i + 2]) + "-"
+    else:
+        result += "1-" + str(curr_date.year)
+        return result
+    if len(list_of_values) >= i + 4 and list_of_values[i + 3].isnumeric() and len(list_of_values[i + 3]) == 4:
+        result += str(list_of_values[i + 3])
+    else:
+        result += str(curr_date.year)
+    return result
+
+# Possible date formats:
+# Month Day Year
+# Month Day => imply current year
+# Month Year => imply first of the month => imply first of the month, current year
+# MM-DD-YYYY
+# MM/DD/YYYY
+# Day of the week???
+
+
 def get_nearest(processed_query: BagOfWordsVector,
                 k: int = 20,
                 thresh: int = 0,
@@ -90,13 +132,18 @@ def get_nearest(processed_query: BagOfWordsVector,
     article_ids = []
     next_date = False
     modifier = ""
+    date = ""
     for s in processed_query:
         if next_date:
             next_date = False
-            article_ids += get_articles_by_date(s, modifier)
+            if date != "":
+                article_ids += get_articles_by_date(date, modifier)
+            else:
+                article_ids += get_articles_by_date(s, modifier)
         elif s in before or s in after or s in on:
             next_date = True
             modifier = s
+            date = check_next_three_words(modifier, processed_query)
         else:
             article_ids += (get_articles_with_similar(s))
     return article_ids
