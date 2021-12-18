@@ -25,7 +25,7 @@ metadata = MetaData(bind=engine)
 
 before = ["before"]
 after = ["after"]
-on = ["on"]
+on = ["on", "from"]
 months = ["january", "february", "march", "april",
           "may", "june", "july", "august", "september",
           "october", "november", "december"]
@@ -133,20 +133,34 @@ def get_nearest(processed_query: BagOfWordsVector,
     next_date = False
     modifier = ""
     date = ""
+    date_restrictions = []
     for s in processed_query:
         if next_date:
             next_date = False
             if date != "":
-                article_ids += get_articles_by_date(date, modifier)
+                if len(date_restrictions) == 0:
+                    date_restrictions += get_articles_by_date(date, modifier)
+                else:
+                    date_restrictions = [value for value in date_restrictions if value in
+                                         get_articles_by_date(date, modifier)]
             else:
-                article_ids += get_articles_by_date(s, modifier)
+                if len(date_restrictions) == 0:
+                    date_restrictions += get_articles_by_date(s, modifier)
+                else:
+                    date_restrictions = [value for value in date_restrictions if value in
+                                         get_articles_by_date(s, modifier)]
         elif s in before or s in after or s in on:
             next_date = True
             modifier = s
             date = check_next_three_words(modifier, processed_query)
         else:
             article_ids += (get_articles_with_similar(s))
-    return article_ids
+    if len(article_ids) == 0 and len(date_restrictions) != 0:
+        return date_restrictions
+    elif len(article_ids) != 0 and len(date_restrictions) == 0:
+        return article_ids
+    else:
+        return [value for value in date_restrictions if value in article_ids]
 
 
 def get_articles_with_similar(s: str) -> list:
