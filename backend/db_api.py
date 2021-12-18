@@ -169,11 +169,14 @@ def get_articles_with_similar(s: str) -> list:
         result = conn.execute("CALL FindSimilarNewssource(%s)", s)
         result2 = conn.execute("CALL FindSimilarKeywords(%s)", s)
         result3 = conn.execute("CALL FindSimilarAuthor(%s)", s)
+        result4 = conn.execute("CALL FindSimilarTitle(%s)", s)
         for row in result:
             article_ids.append(row["ArticleID"])
         for row in result2:
             article_ids.append(row["ArticleID"])
         for row in result3:
+            article_ids.append(row["ArticleID"])
+        for row in result4:
             article_ids.append(row["ArticleID"])
     return article_ids
 
