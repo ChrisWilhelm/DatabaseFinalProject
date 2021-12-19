@@ -10,7 +10,7 @@ from backend.custom_types import Rating
 from db_types import *
 from random import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
+from consts import *
 parser = argparse.ArgumentParser()
 
 parser.add_argument("--percent_upload", type=float, default=0.1)
@@ -18,9 +18,8 @@ parser.add_argument("__n_workers", type=int, default=200)
 args = parser.parse_args()
 
 percent_articles_to_keep : float = args.percent_upload
-aws_ip = "54.211.230.209"
 
-engine = create_engine("mysql+pymysql://db_final:password@" + aws_ip + "/db_final_db")
+engine = create_engine("mysql+pymysql://db_final:password@" + AWS_IP + "/db_final_db")
 session_factory = sessionmaker(bind = engine)
 Session = scoped_session(session_factory)
 

@@ -1,13 +1,17 @@
 import os
 import pickle
 from argparse import ArgumentParser
+from typing import List
 
 import pytz
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from sqlalchemy import desc, asc, nullslast
 from sqlitedict import SqliteDict
+from consts import *
+from sqlalchemy.orm import sessionmaker, scoped_session
 
 from custom_types import Story
 from utils import *
@@ -32,6 +36,11 @@ query_map_path = os.path.join(db_path, "query_map.db")
 doc_vecs_db_path = os.path.join(db_path, "doc_vecs.db")
 
 
+engine = create_engine("mysql+pymysql://db_final:password@" + AWS_IP + "/db_final_db")
+session_factory = sessionmaker(bind = engine)
+Session = scoped_session(session_factory)
+
+
 def remove_repeat_articles(articles: list[Story]) -> list[Story]:
     new_article_info = set()
     new_articles = []
@@ -43,38 +52,52 @@ def remove_repeat_articles(articles: list[Story]) -> list[Story]:
 
 
 def setup_db() -> None:
-    with open("../stories.pickle", "rb") as fp:
-        articles = pickle.load(fp)
-    articles = remove_repeat_articles(articles)
     doc_vecs_db = SqliteDict(doc_vecs_db_path)
+    session = Session()
+    articles = session.execute(
+        select(Article)
+    )
     article_weights = ArticleDataWeights(author=5, keywords=3, summary=1, title=4, publisher=5)
-    article_data = [ArticleData(
-        title=tokenize_string(article.title),
-        summary=tokenize_string(article.summary),
-        keywords=article.keywords,
-        author=article.authors,
-        publisher=[article.news_source.name]) for article in tqdm(articles,
-                                                                  total=len(articles),
-                                                                  desc="Pre-processing: Tokenizing data")]
-    vectors = generate_doc_tfidfs(article_data, article_weights)
-    for i, article in enumerate(tqdm(articles,
-                                     total=len(articles),
-                                     desc="Pre-processing: Adding vectors to database")):
-        key = i
-        news_article = Document(
-            doc_id=key,
-            title=article.title,
-            summary=article.summary,
-            link=article.url,
-            vector=vectors[i],
-            date=article.publish_date,
-            publisher=article.news_source.name,
-            rating=article.news_source.rating.name,
-            site_link=article.news_source.url
+    article_data = []
+    article_ids = []
+    print("Fetching articles.")
+    for article in articles.scalars():
+        author_result = session.execute(
+            select(Author.AName)
+            .join(WroteBy)
+            .where(WroteBy.ArticleID == article.ArticleID)
         )
-        doc_vecs_db[key] = news_article
+        authors = [author for author in author_result.scalars()]
+        keyword_result = session.execute(
+            select(KeyWord.KeyWord)
+            .join(HasKeyWord)
+            .where(HasKeyWord.ArticleID == article.ArticleID)
+        )
+        keywords = [keyword for keyword in keyword_result.scalars()]
+        news_source: NewsSource = session.execute(
+            select(NewsSource)
+            .where(NewsSource.NewsSourceID == article.NewsSourceID)
+        ).first()
+        new_data = ArticleData(
+            title=tokenize_string(article.Aname),
+            summary=tokenize_string(article.ArticleSummary),
+            keywords=keywords,
+            author=authors,
+            publisher=[news_source.NewsSource.NewsSourceName]
+        )
+        article_data.append(new_data)
+        article_ids.append(article.ArticleID)
+    print("Articles fetched.")
+
+    vectors = generate_doc_tfidfs(article_data, article_weights)
+    print("Document vectors created.")
+    for i, id in enumerate(article_ids):
+        # store associated document vector in K,V store
+        doc_vecs_db[id] = vectors[i]
+    Session.remove()
     doc_vecs_db.commit()
     doc_vecs_db.close()
+    print("Finished setting up vector db")
 
 
 def clear_db(db_path_shadow: str) -> None:
@@ -86,39 +109,58 @@ def clear_db(db_path_shadow: str) -> None:
     doc_vecs_db.close()
 
 
+def add_conditions(stmt, condition_list: List[QueryCondition]):
+    for condition in condition_list:
+        stmt = condition.apply(stmt)
+    return stmt
+
+
+def get_articles_by_id(ids: List[int], condition_tree) -> List[dict]:
+    session = Session()
+    output = []
+    #j = join(Article, NewsSource, Article.NewsSourceID == NewsSource.NewsSourceID)
+    stmt = select(Article, NewsSource)\
+        .where(Article.NewsSourceID == NewsSource.NewsSourceID)\
+        .where(Article.ArticleID.in_(ids))
+    stmt = add_conditions(stmt, condition_tree)
+    stmt = stmt.order_by(desc(Article.PublishDate))
+    articles_and_sources = session.execute(
+        stmt
+    )
+    results = []
+    for row in articles_and_sources:
+        doc_dict = {
+            "doc_id": row.Article.ArticleID,
+            "title": row.Article.Aname,
+            "summary": row.Article.ArticleSummary,
+            "link": row.Article.URL,
+            "date": row.Article.PublishDate,
+            "rating": ratings_dict[row.NewsSource.BiasID],
+            "publisher": row.NewsSource.NewsSourceName,
+            "site": row.NewsSource.Homepage
+        }
+        results.append(doc_dict)
+    Session.remove()
+    return results
+
+
 @app.get("/query")
 async def get_articles(q: str, n_results: Optional[int] = 20) -> dict:
     # first see if we have a cached result
-    results, processed_query = check_for_cached_result(q)
-    if len(results) > 0:
+    query_string, condition_tree = extract_query_conditions(q)
+    result_ids, processed_query = check_for_cached_result(query_string)
+    if len(result_ids) > 0:
+        results = get_articles_by_id(result_ids, condition_tree)
         return {"results": results}
     else:
-        search_results = get_new_search_results(q, processed_query, n_results)
-        return {"results": sort_search_by_date(search_results)}
+        result_ids = get_new_search_results(query_string, processed_query, n_results)
+        results = get_articles_by_id(result_ids, condition_tree)
+        return {"results": results}
 
 
 # Isolate function to generate new search results in case queries need to be updated
 def get_new_search_results(q: str, processed_query: BagOfWordsVector, k: int) -> list:
-    search_results = []
-    doc_ids = get_nearest(processed_query, k=k)
-    doc_db = SqliteDict(doc_vecs_db_path)
-    # Extract document information based on ids
-    for doc_id in doc_ids:
-        document = doc_db[doc_id]
-        doc_dict = {
-            "doc_id": document.doc_id,
-            "title": document.title,
-            "summary": document.summary,
-            "link": document.link,
-            "date": document.date if hasattr(document, "date") else datetime.min.replace(tzinfo=pytz.UTC),
-            "rating": document.rating,
-            "publisher": document.publisher,
-            "site": document.site_link
-        }
-        search_results.append(doc_dict)
-
-    doc_db.close()
-    # Add query we haven't seen to db
+    search_results = get_nearest(processed_query, k=k)
     query_map_db = SqliteDict(query_map_path)
     query_map_db[q] = processed_query
     query_map_db.commit()
@@ -162,7 +204,7 @@ def check_for_cached_result(query: str, thresh: float = 0.8, sim=cosine_sim) -> 
         result = query_results[max_sim_query]
         query_map.close()
         query_results.close()
-        return result
+        return result, processed_query
     query_map.close()
     query_results.close()
     return [], processed_query
@@ -220,7 +262,7 @@ def get_nearest(query_vec: BagOfWordsVector,
                 return_all: bool = False) -> list:
     # Generate tuple list with entries in the form of (<doc_id>, <doc_vector>)
     db = SqliteDict(doc_vecs_db_path)
-    doc_pairs = [(key, value.vector) for key, value in db.items()]
+    doc_pairs = [(key, value) for key, value in db.items()]
     db.close()
     if thresh != 0:
         results = search_by_threshold(query_vec, doc_pairs, thresh, sim=sim)
@@ -335,3 +377,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
