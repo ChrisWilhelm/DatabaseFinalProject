@@ -8,9 +8,20 @@ from nltk.tokenize import word_tokenize
 from numpy.linalg import norm
 from tqdm import tqdm
 
+from consts import ratings_dict
+from db_types  import *
+from sqlalchemy import select, create_engine
+
+from condition_parser import *
+import re
+
 stop_words = set(stopwords.words('english'))
 # typedefs
 BagOfWordsVector = dict[str, float]
+
+import nltk
+nltk.download('stopwords')
+nltk.download('punkt')
 
 
 class Document(NamedTuple):
@@ -203,3 +214,133 @@ def generate_doc_tfidfs(docs: Iterable[ArticleData], weights: ArticleDataWeights
         for doc in docs:
             vectors.append(compute_tfidf(doc, doc_freqs, weights))
     return vectors
+
+
+class QueryCondition():
+    def apply(self, statement):
+        return NotImplementedError
+
+
+class BeforeCondition(QueryCondition):
+
+    def __init__(self, date: datetime):
+        self.date = date
+
+    def apply(self, statement):
+        return statement.where(Article.PublishDate < self.date)
+
+
+class AfterCondition(QueryCondition):
+
+    def __init__(self, date: datetime):
+        self.date = date
+
+    def apply(self, statement):
+        return statement.where(Article.PublishDate > self.date)
+
+
+class AuthorCondition(QueryCondition):
+
+    def __init__(self, authors_list):
+        self.authors = authors_list
+
+    def apply(self, statement):
+        for author in self.authors:
+            statement = statement.where(
+                select(Author)
+                    .join(WroteBy)
+                    .where(Author.AName == author and Article.ArticleID == WroteBy.ArticleID)
+                    .exists()
+            )
+        return statement
+
+
+class NewsSourceCondition(QueryCondition):
+    def __init__(self, publisher):
+        self.publisher = publisher
+
+    def apply(self, statement):
+        return statement.where(
+            NewsSource.NewsSourceName == self.publisher
+        )
+
+
+class BiasRatingCondition(QueryCondition):
+    def __init__(self, bias):
+        self.bias_id = ratings_dict[bias]
+
+    def apply(self, statement):
+        return statement.where(
+            NewsSource.BiasID == self.bias_id
+        )
+
+
+class NullQueryCondition(QueryCondition):
+    def apply(self, statement):
+        return statement
+
+
+condition_pattern = re.compile("`.*`")
+
+
+def create_written_by_condition(raw_author_list: list[str]) -> AuthorCondition:
+    authors = []
+    for author_name in author_list:
+        if author_name != AND_TOKEN:
+            authors.append(author_name)
+    return AuthorCondition(authors)
+
+
+def create_written_before_condition(date_string: str) -> BeforeCondition:
+    date = datetime.strptime(date_string, "%m-%d-%Y")
+    return BeforeCondition(date)
+
+
+def create_written_after_condition(date_string: str) -> AfterCondition:
+    date = datetime.strptime(date_string, "%m-%d-%Y")
+    return AfterCondition(date)
+
+
+def create_published_by_condition(publisher: str) -> NewsSourceCondition:
+    return NewsSourceCondition(publisher)
+
+
+def create_bias_condition(bias: str) -> BiasRatingCondition:
+    return BiasRatingCondition(ratings_tok_dict[bias])
+
+
+def create_condition_object(raw_condition: list) -> QueryCondition:
+    if raw_condition[0] == WRITTEN_BY_TOK:
+        return create_written_by_condition(raw_condition[1])
+    elif raw_condition[0] == WRITTEN_BEFORE_TOK:
+        return create_written_before_condition(raw_condition[1])
+    elif raw_condition[0] == WRITTEN_AFTER_TOK:
+        return create_written_after_condition(raw_condition[1])
+    elif raw_condition[0] == PUBLISHED_BY_TOK:
+        return create_published_by_condition(raw_condition[1])
+    elif raw_condition[0] == BIAS_TOK:
+        return create_bias_condition(raw_condition[1])
+    else:
+        return NullQueryCondition()
+
+
+def extract_query_conditions(q: str) -> tuple[str, list[QueryCondition]]:
+    match = condition_pattern.search(q)
+    to_apply = []
+    if match is not None:
+        conditions = condition_list.parseString(q[match.span()[0]:match.span()[1]])
+        for i in range(1, len(conditions) - 1):
+            to_apply.append(create_condition_object(conditions[i]))
+        q = q[0:match.span()[0]] + q[match.span()[1]:len(q)]
+    return q, to_apply
+
+
+if __name__ == "__main__":
+    query = "Biden coronavirus `WRITTEN BEFORE 10-20-2020`"
+    extract_query_conditions(query)
+
+
+
+
+
+

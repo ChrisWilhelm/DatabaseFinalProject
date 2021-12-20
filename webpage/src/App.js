@@ -187,7 +187,7 @@ const RatingIcon = ({rating, index}) => {
 const ArticleBody = ({article, index, query}) => {
     const date = article.date ? new Date(article.date) : null;
     const dateString = date ? months[date.getMonth()] + " "
-        + (date.getDate()) + ", " + date.getFullYear() : "unlisted";
+        + (date.getDate()) + ", " + date.getFullYear() : "Date not available";
    return (
        <VerticalTimelineElement
         className="vertical-timeline-element--work"
