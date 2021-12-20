@@ -19,6 +19,10 @@ stop_words = set(stopwords.words('english'))
 # typedefs
 BagOfWordsVector = dict[str, float]
 
+import nltk
+nltk.download('stopwords')
+nltk.download('punkt')
+
 
 class Document(NamedTuple):
     doc_id: int
