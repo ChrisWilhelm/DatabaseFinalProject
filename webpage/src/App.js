@@ -6,7 +6,7 @@ import {
     VerticalTimeline,
     VerticalTimelineElement
 }  from 'react-vertical-timeline-component';
-import {HOST} from "./config";
+import {HOST, LOCAL_HOST} from "./config";
 import 'react-vertical-timeline-component/style.min.css';
 import {IoNewspaperOutline, FaThumbsUp, FaThumbsDown} from "react-icons/all";
 import {Button, Popover, PopoverBody, PopoverHeader} from "reactstrap";
@@ -19,7 +19,7 @@ const months = [ "January", "February", "March", "April", "May", "June",
 function onSubmit(query, setLoading, setArticles, setError) {
     setLoading(true);
     setError(false);
-    const url = HOST + "/query?q=" + query
+    const url = LOCAL_HOST + "/query?q=" + query
     console.log(url);
     fetch(url, {
         headers: {

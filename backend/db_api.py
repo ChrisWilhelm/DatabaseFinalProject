@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.utils import process_query, BagOfWordsVector, cosine_sim
 from db_types import *
 from fastapi import FastAPI
+from consts import AWS_IP
 
 app = FastAPI()
 
@@ -15,9 +16,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
-aws_ip = "54.211.230.209"
 
-engine = create_engine("mysql+pymysql://db_final:password@" + aws_ip + "/db_final_db")
+engine = create_engine("mysql+pymysql://db_final:password@" + AWS_IP + "/db_final_db")
 session_factory = sessionmaker(bind=engine)
 Session = scoped_session(session_factory)
 session = Session()
@@ -78,7 +78,7 @@ def get_articles_with_similar(s: str) -> set:
 
 
 def main() -> None:
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    uvicorn.run(app, host="127.0.0.1", port=8080)
 
 
 if __name__ == "__main__":
