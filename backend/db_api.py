@@ -2,7 +2,6 @@ from sqlalchemy import create_engine, MetaData, desc
 from sqlalchemy.orm import sessionmaker, scoped_session
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.ext.serializer import loads, dumps
 
 from backend.utils import process_query, BagOfWordsVector, cosine_sim
 from db_types import *

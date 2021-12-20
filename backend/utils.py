@@ -8,7 +8,7 @@ from nltk.tokenize import word_tokenize
 from numpy.linalg import norm
 from tqdm import tqdm
 
-from backend.consts import ratings_dict
+from consts import ratings_dict
 from db_types  import *
 from sqlalchemy import select, create_engine
 
