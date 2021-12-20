@@ -1,4 +1,4 @@
-AWS_IP = "54.211.230.209"
+AWS_IP = "44.202.10.14"
 
 ratings_dict = {
     1: "LEFT",
