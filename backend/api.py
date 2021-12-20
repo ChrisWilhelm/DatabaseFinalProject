@@ -141,7 +141,7 @@ def get_articles_by_id(ids: List[int], condition_tree) -> List[dict]:
         }
         results.append(doc_dict)
     Session.remove()
-    print("HERE!")
+    print(len(results))
     return results
 
 
