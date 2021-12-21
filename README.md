@@ -14,7 +14,7 @@ To install the required python packages, use the command `pip3 install -r requir
 
 You may need to download the `stopwords` NLTK resource if not already downloaded. If this is indeed the case, a `LookupError` will occur when initializing the database and instructions on how to use the NLTK Downloader to obtain this resource will be printed to the console.
 
-Now, everything is set up to run the REST API. To start the server, run the command `python backend/api.py --reset_db --reset_cache`. This may take a few seconds to start because the script needs to vectorize the documents in the database. If you have run the script in the past and know that the databases are populated, you can avoid recreating the document vectors by removing the flags `--reset_db` and `--reset_cache`.
+Now, everything is set up to run the REST API. To start the server, move into the backend directory using `cd backend` and run the command `python api.py --reset_db --reset_cache`. This may take a few seconds to start because the script needs to vectorize the documents in the database. If you have run the script in the past and know that the databases are populated, you can avoid recreating the document vectors by removing the flags `--reset_db` and `--reset_cache`.
 
 Once the backend is running, open another terminal and navigate to the project root folder (`IR_FinalProject`), then navigate to the webpage folder with `cd webpage`.
 
