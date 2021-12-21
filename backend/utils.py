@@ -117,7 +117,7 @@ def string2vec(sentence: str) -> BagOfWordsVector:
     converts a query string into a sparse word vector
     '''
     words = word_tokenize(sentence)
-    new_words = [word for word in words if word.isalnum()]
+    new_words = [word for word in words]
     vec = defaultdict(int)
     for word in new_words:
         vec[word] += 1
