@@ -31,21 +31,7 @@ were actually valid. The [source stub](media_bias_table.html) was saved from
 [here](https://www.allsides.com/media-bias/media-bias-ratings?field_featured_bias_rating_value=All&field_news_source_type_tid%5B2%5D=2&field_news_bias_nid_1%5B1%5D=1&field_news_bias_nid_1%5B2%5D=2&field_news_bias_nid_1%5B3%5D=3&title=)
 on May 6, 2021. We scraped 39,278 stories, which can be found in Pickle format [here](stories.pickle).
 
-### Extension for 601.415/615
-
-The above was implemented for a final project for 601.666 Information Retrieval and Web Agents. In the original project,
-the documents were all stored in a local Key, Value store. For this class, we upgraded the database to be a relational database
-using a remote mysql server and added the functionality that you can add query conditions from the search bar.
-
-For this project, we decided to host the website remotely. NewsLine is hosted at 54.211.230.209. To access it, please go to
-[https://54.211.230.209](https://54.211.230.209).
+For this project, we decided to host the website remotely. NewsLine is hosted at 44.202.10.14:3000. To access it, please go to
+[http://44.202.10.14:3000](http://44.202.10.14:3000).
 The schema used for this database is found in the file `DatabaseFinalProject.sql`. The script used to normalize and upload
 the scraped and indexed article data is `db/load_db.py`.
-
-To add boolean conditions to a query, append a condition string, wrapped with backticks (\`) to the end of a regular query.
-The following conditions are supported:
-
-- Specify the articles' authors. Add `WRITTEN BY "<Author Full Name>".` To specify more than one author, add "AND" to the query.
-`WRITTEN BY <First Author Name> AND <Second Author Name> AND ... AND <Last Author Name>`.
-- Specify a date range for the articles. To select articles written before a specific date, add `WRITTEN BEFORE M-D-Y` where
-M represents a month (1-12), D represents a day, and Y represents a four digit year. To specify a
