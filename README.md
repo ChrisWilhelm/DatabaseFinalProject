@@ -26,6 +26,14 @@ First, `yarn` must be installed. You can do so by running the command `npm insta
 
 ![](./screenshots/NewsLine2.png)
 
+![](./screenshots/before_query.PNG)
+
+![](./screenshots/date_range.PNG)
+
+![](./screenshots/published_cond.PNG)
+
+![](./screenshots/NewsLine2.png)
+
 There were 432 news source candidates in the original dump from AllSides Media Bias Ratings, but only 358 news sources
 were actually valid. The [source stub](media_bias_table.html) was saved from
 [here](https://www.allsides.com/media-bias/media-bias-ratings?field_featured_bias_rating_value=All&field_news_source_type_tid%5B2%5D=2&field_news_bias_nid_1%5B1%5D=1&field_news_bias_nid_1%5B2%5D=2&field_news_bias_nid_1%5B3%5D=3&title=)
